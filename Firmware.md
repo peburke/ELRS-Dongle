@@ -21,7 +21,8 @@ USB HID gamepad on an ESP32-S3.
 3. Valid type `0x16` payloads are unpacked into sixteen 11-bit channels.
 4. Channels 1-4 become X, Y, throttle/Z, and Rz USB axes.
 5. If no valid RC frame arrives for 1000 ms after the link has been active, a
-   one-shot safe report centers roll, pitch, and yaw and lowers throttle.
+   safe report centers roll, pitch, and yaw and lowers throttle. A rejected USB
+   send is retried every 20 ms until delivery succeeds.
 
 ## Wiring
 
@@ -69,9 +70,11 @@ buttons and axes remain released/centered.
 
 CRSF receivers can stop transmitting RC channel frames during failsafe. The
 firmware records each valid CRC-checked RC frame. Once a working stream has
-been seen, a 1000 ms gap causes one safe USB report with centered directional
-axes, minimum throttle, centered hat, and no buttons. A later valid frame
-automatically resumes normal reports and rearms the timeout.
+been seen, a 1000 ms gap requests a safe USB report with centered directional
+axes, minimum throttle, centered hat, and no buttons. Delivery is confirmed
+only when the HID API accepts the report; a temporarily busy USB interface is
+retried every 20 ms. A later valid frame automatically resumes normal reports
+and rearms the timeout.
 
 Change `kRcFailsafeTimeoutMs` if a different delay is required. Do not set it
 below the expected radio update interval.

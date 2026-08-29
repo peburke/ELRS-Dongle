@@ -19,6 +19,8 @@
 
 #include "ELRSProtocol.h"
 
+static_assert(HAT_CENTER == 0, "ESP32 HID hat-center value changed");
+
 namespace {
 
 constexpr uint32_t kCrsfBaud = 420000;
@@ -27,19 +29,22 @@ constexpr int8_t kCrsfRxPin = 3;
 constexpr int8_t kCrsfTxPin = 4;
 constexpr uint32_t kParserInterByteTimeoutUs = 2000;
 constexpr uint32_t kRcFailsafeTimeoutMs = 1000;
+constexpr uint32_t kFailsafeRetryIntervalMs = 20;
 
 USBHIDGamepad gamepad;
 HardwareSerial crsfSerial(kCrsfUartNumber);
 elrs::CrsfParser crsfParser(kParserInterByteTimeoutUs);
-elrs::RcLinkState rcLink(kRcFailsafeTimeoutMs);
+elrs::RcLinkState rcLink(kRcFailsafeTimeoutMs, kFailsafeRetryIntervalMs);
 
 uint32_t hidSendFailures = 0;
 
-void sendHidReport(const elrs::HidReport &report) {
+bool sendHidReport(const elrs::HidReport &report) {
   if (!gamepad.send(report.x, report.y, report.z, report.rz,
                     report.rx, report.ry, report.hat, report.buttons)) {
     ++hidSendFailures;
+    return false;
   }
+  return true;
 }
 
 }  // namespace
@@ -64,8 +69,9 @@ void loop() {
     }
   }
 
-  if (rcLink.consumeFailsafe(millis())) {
-    sendHidReport(elrs::makeFailsafeReport());
+  if (rcLink.shouldSendFailsafe(millis()) &&
+      sendHidReport(elrs::makeFailsafeReport())) {
+    rcLink.confirmFailsafeSent();
   }
 }
 

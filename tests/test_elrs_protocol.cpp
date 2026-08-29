@@ -74,14 +74,24 @@ void testHidReportHasCenteredHat() {
   expectEqual("yaw centered", report.rz, int8_t{0});
 }
 
-void testFailsafeTriggersOnceAfterTimeout() {
-  elrs::RcLinkState link(1000);
+void testFailsafeRetriesUntilDeliveryIsConfirmed() {
+  elrs::RcLinkState link(1000, 20);
   link.noteFrame(100);
-  expectEqual("fresh link", link.consumeFailsafe(1099), false);
-  expectEqual("timeout reached", link.consumeFailsafe(1100), true);
-  expectEqual("failsafe only once", link.consumeFailsafe(1200), false);
+  expectEqual("fresh link", link.shouldSendFailsafe(1099), false);
+  expectEqual("timeout reached", link.shouldSendFailsafe(1100), true);
+  expectEqual("retry rate limited", link.shouldSendFailsafe(1101), false);
+  expectEqual("failed send retried", link.shouldSendFailsafe(1120), true);
+  link.confirmFailsafeSent();
+  expectEqual("confirmed failsafe stops retries", link.shouldSendFailsafe(1200), false);
   link.noteFrame(1300);
-  expectEqual("new frame rearms failsafe", link.consumeFailsafe(2300), true);
+  expectEqual("new frame rearms failsafe", link.shouldSendFailsafe(2300), true);
+}
+
+void testFailsafeTimeoutHandlesMillisWraparound() {
+  elrs::RcLinkState link(1000, 20);
+  link.noteFrame(UINT32_MAX - 499);
+  expectEqual("wrapped link still fresh", link.shouldSendFailsafe(499), false);
+  expectEqual("wrapped timeout reached", link.shouldSendFailsafe(500), true);
 }
 
 void testFailsafeReportCentersAxesAndLowersThrottle() {
@@ -121,7 +131,8 @@ int main() {
   testCorruptFrameIsRejected();
   testAxisMappingUsesCrsfCalibration();
   testHidReportHasCenteredHat();
-  testFailsafeTriggersOnceAfterTimeout();
+  testFailsafeRetriesUntilDeliveryIsConfirmed();
+  testFailsafeTimeoutHandlesMillisWraparound();
   testFailsafeReportCentersAxesAndLowersThrottle();
   testInterByteTimeoutResynchronizesParser();
 

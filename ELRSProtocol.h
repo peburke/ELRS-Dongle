@@ -56,14 +56,18 @@ class CrsfParser {
 
 class RcLinkState {
  public:
-  explicit RcLinkState(uint32_t timeoutMs);
+  explicit RcLinkState(uint32_t timeoutMs, uint32_t retryIntervalMs = 20);
   void noteFrame(uint32_t nowMs);
-  bool consumeFailsafe(uint32_t nowMs);
+  bool shouldSendFailsafe(uint32_t nowMs);
+  void confirmFailsafeSent();
 
  private:
   uint32_t timeoutMs_;
+  uint32_t retryIntervalMs_;
   uint32_t lastFrameMs_;
+  uint32_t lastAttemptMs_;
   bool hasFrame_;
+  bool hasAttempted_;
   bool failsafeSent_;
 };
 

@@ -138,23 +138,36 @@ bool CrsfParser::push(uint8_t byte, uint32_t nowUs, RcChannels &channels) {
   return false;
 }
 
-RcLinkState::RcLinkState(uint32_t timeoutMs)
+RcLinkState::RcLinkState(uint32_t timeoutMs, uint32_t retryIntervalMs)
     : timeoutMs_(timeoutMs),
+      retryIntervalMs_(retryIntervalMs),
       lastFrameMs_(0),
+      lastAttemptMs_(0),
       hasFrame_(false),
+      hasAttempted_(false),
       failsafeSent_(false) {}
 
 void RcLinkState::noteFrame(uint32_t nowMs) {
   lastFrameMs_ = nowMs;
   hasFrame_ = true;
+  hasAttempted_ = false;
   failsafeSent_ = false;
 }
 
-bool RcLinkState::consumeFailsafe(uint32_t nowMs) {
+bool RcLinkState::shouldSendFailsafe(uint32_t nowMs) {
   if (!hasFrame_ || failsafeSent_) return false;
   if (static_cast<uint32_t>(nowMs - lastFrameMs_) < timeoutMs_) return false;
-  failsafeSent_ = true;
+  if (hasAttempted_ &&
+      static_cast<uint32_t>(nowMs - lastAttemptMs_) < retryIntervalMs_) {
+    return false;
+  }
+  lastAttemptMs_ = nowMs;
+  hasAttempted_ = true;
   return true;
+}
+
+void RcLinkState::confirmFailsafeSent() {
+  failsafeSent_ = true;
 }
 
 }  // namespace elrs
