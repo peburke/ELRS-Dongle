@@ -1,0 +1,38 @@
+name: Firmware
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  native-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run protocol tests
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror \
+            tests/test_elrs_protocol.cpp ELRSProtocol.cpp \
+            -o tests/test_elrs_protocol
+          tests/test_elrs_protocol
+
+  esp32-s3-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install ESP32 Arduino core 3.3.4
+        run: |
+          arduino-cli config init
+          arduino-cli config add board_manager.additional_urls \
+            https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32@3.3.4
+      - name: Compile ESP32-S3 USB-OTG firmware
+        run: |
+          mkdir -p build/ELRS_Dongle
+          cp ELRS_Dongle.ino ELRSProtocol.h ELRSProtocol.cpp build/ELRS_Dongle/
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32s3:USBMode=default,CDCOnBoot=default \
+            build/ELRS_Dongle
+
