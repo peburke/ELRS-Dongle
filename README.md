@@ -1,6 +1,15 @@
-In this projegct I build a inexpensive and super simple wireless adapter to connect my Edge TX radio with ELRS Tx to my PC for running FPV simulators. I’ve tested it and comfirm it works flawlesly with Velocidrone and Liftoff.
+# ELRS Dongle
 
-The hardware is based on the ESP32-S3-Mini and the Betafpv ELRS Lite Receiver. I’m not a programer, so I used ChatGPT to generate the code for me which worked out very well. 
+An inexpensive wireless USB gamepad adapter for FPV simulators. It connects an
+EdgeTX radio through an ExpressLRS transmitter and receiver to an ESP32-S3,
+which presents the first four CRSF channels to a PC as joystick axes.
 
+The dongle has been tested with Velocidrone and Liftoff. The hardware uses an
+ESP32-S3-Mini and a BetaFPV ELRS Lite receiver; printable enclosure files are
+included in this repository.
 
-![Dongle](https://github.com/user-attachments/assets/eb5f7429-112b-47e9-9832-870cd60de492)
+![ELRS Dongle](https://github.com/user-attachments/assets/eb5f7429-112b-47e9-9832-870cd60de492)
+
+See [Firmware.md](Firmware.md) for wiring, Arduino settings, calibration,
+failsafe behavior, testing, and troubleshooting.
+
